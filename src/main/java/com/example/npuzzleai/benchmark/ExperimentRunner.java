@@ -162,8 +162,8 @@ public final class ExperimentRunner {
         sorted.sort(Comparator.comparingInt((RunRecord r) -> comboOrder.getOrDefault(r.algorithm() + "\u0000" + r.heuristic(), 0))
                 .thenComparingInt(RunRecord::instance)
                 .thenComparingInt(RunRecord::repetition));
-        return new ExperimentResult(config, dataset, sorted, preprocessNs, EnvironmentInfo.collect(),
-                startedAt, Instant.now(), stop.get(), List.copyOf(log));
+        return new ExperimentResult(config, dataset, applyConsensus(sorted, dataset), preprocessNs,
+                EnvironmentInfo.collect(), startedAt, Instant.now(), stop.get(), List.copyOf(log));
     }
 
     private RunRecord execute(Task task, Dataset dataset, SearchBudget budget, SearchObserver observer,
@@ -206,7 +206,33 @@ public final class ExperimentRunner {
         }
         return new RunRecord(runOrder, task.combo().algorithm().id(), task.combo().heuristicId(), task.instance(),
                 task.repetition(), result.status(), optimal, pathValid, optimalityOk, result.metrics(),
-                Thread.currentThread().getName());
+                Thread.currentThread().getName(), claimsOptimal(task.combo()));
+    }
+
+    /**
+     * Khi dataset không có độ dài tối ưu (4x4 trở lên), dùng độ dài ngắn nhất mà các tổ hợp có cam kết
+     * tối ưu tìm được làm tham chiếu. Tổ hợp cam kết tối ưu nhưng dài hơn tham chiếu bị đánh dấu sai -
+     * phát hiện lỗi duplicate/reopen/f-bound ngay cả khi không có oracle chính xác.
+     */
+    static List<RunRecord> applyConsensus(List<RunRecord> records, Dataset dataset) {
+        if (dataset.optimalLength() != null) return records;
+        Map<Integer, Long> reference = new LinkedHashMap<>();
+        for (RunRecord r : records) {
+            if (r.solved() && r.claimsOptimal() && r.pathValid()) {
+                reference.merge(r.instance(), r.solutionLength(), Math::min);
+            }
+        }
+        List<RunRecord> out = new ArrayList<>(records.size());
+        for (RunRecord r : records) {
+            Long ref = reference.get(r.instance());
+            if (ref == null) {
+                out.add(r);
+            } else {
+                Boolean ok = r.solved() && r.claimsOptimal() ? Boolean.valueOf(r.solutionLength() == ref) : null;
+                out.add(r.withReference(ref.intValue(), ok));
+            }
+        }
+        return out;
     }
 
     /** Tổ hợp có cam kết tối ưu: thuật toán tối ưu + heuristic khai báo chấp nhận được (hoặc không dùng h). */

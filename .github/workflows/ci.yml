@@ -25,12 +25,20 @@ jobs:
         run: mvn -B -ntp verify
 
       # Benchmark nhỏ, tất định - phát hiện lỗi tính đúng đắn (không dùng để so sánh thời gian).
-      - name: Small deterministic benchmark
+      # 3x3: đối chiếu với h* chính xác; 4x4: kiểm tra đồng thuận giữa các thuật toán tối ưu.
+      - name: Small deterministic benchmark (3x3, exact oracle)
         run: >
           mvn -B -ntp -q exec:java
-          -Dexec.args="benchmark --dataset exact-3x3 --algos astar,ida,rbfs,sma:100000
+          -Dexec.args="benchmark --dataset exact-3x3 --algos astar,ida,rbfs,sma:100000,hda:2,focal:1.5
           --heuristics manhattan,linear-conflict,apdb --reps 1 --warmup 0 --timeout 20
-          --out target/ci-experiments --name ci-smoke"
+          --out target/ci-experiments --name ci-smoke-3x3"
+
+      - name: Optimality consensus benchmark (4x4)
+        run: >
+          mvn -B -ntp -q exec:java
+          -Dexec.args="benchmark --dataset random-15p --algos astar,ida,rbfs,hda:2
+          --heuristics apdb --reps 1 --warmup 0 --timeout 20
+          --out target/ci-experiments --name ci-consensus-4x4"
 
       - name: Upload test & coverage reports
         if: always()

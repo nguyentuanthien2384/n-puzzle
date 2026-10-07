@@ -17,6 +17,8 @@ import java.util.Map;
  *   <li>iterations - số vòng lặp ngưỡng (IDA*); regenerated - số node mở rộng lại (IDA*: ngoài vòng cuối;
  *       RBFS: số lần quay lại một nhánh đã mở; SMA*: successor đã bị quên rồi sinh lại).</li>
  *   <li>evictions - node bị SMA* loại khỏi bộ nhớ.</li>
+ *   <li>messages/workers/loadImbalancePct - tìm kiếm song song (HDA*): số trạng thái chuyển giữa các worker,
+ *       số worker, và mất cân bằng tải = max/trung bình số node mở rộng mỗi worker × 100.</li>
  *   <li>heuristicTimeNs - <i>ước lượng</i> bằng cách đo 1/32 số lần gọi rồi nhân lại, để không làm sai lệch thời gian.</li>
  *   <li>peakHeapBytes/gcCount/gcTimeNs/preprocessTimeNs - do ExperimentRunner điền.</li>
  * </ul>
@@ -37,6 +39,9 @@ public final class SearchMetrics {
     public long maxDepth;
     public long fLimitUpdates;
     public long evictions;
+    public long messages;
+    public long workers = 1;
+    public long loadImbalancePct = 100;
     public long solutionLength = -1;
     public long solutionCost = -1;
     public long wallTimeNs;
@@ -63,6 +68,9 @@ public final class SearchMetrics {
         m.maxDepth = maxDepth;
         m.fLimitUpdates = fLimitUpdates;
         m.evictions = evictions;
+        m.messages = messages;
+        m.workers = workers;
+        m.loadImbalancePct = loadImbalancePct;
         m.solutionLength = solutionLength;
         m.solutionCost = solutionCost;
         m.wallTimeNs = wallTimeNs;
@@ -92,6 +100,9 @@ public final class SearchMetrics {
         map.put("maxDepth", maxDepth);
         map.put("fLimitUpdates", fLimitUpdates);
         map.put("evictions", evictions);
+        map.put("messages", messages);
+        map.put("workers", workers);
+        map.put("loadImbalancePct", loadImbalancePct);
         map.put("solutionLength", solutionLength);
         map.put("solutionCost", solutionCost);
         map.put("wallTimeNs", wallTimeNs);

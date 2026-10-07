@@ -156,6 +156,28 @@ public final class SearchContext {
         return false;
     }
 
+    /**
+     * Kiểm tra mọi giới hạn ngay lập tức (không lấy mẫu 1/256 như {@link #shouldStop()}).
+     * Dùng cho thuật toán gọi kiểm tra thưa, ví dụ mỗi vòng đồng bộ của HDA* hoặc mỗi mô phỏng MCTS.
+     */
+    public boolean shouldStopNow() {
+        if (stopStatus != null) return true;
+        long maxExpanded = budget.maxExpandedNodes();
+        if (maxExpanded > 0 && metrics.expanded >= maxExpanded) {
+            stopStatus = SearchStatus.NODE_LIMIT;
+        } else if (observer.isCancelled() || Thread.currentThread().isInterrupted()) {
+            stopStatus = SearchStatus.CANCELLED;
+        } else if (deadlineNanos != 0 && System.nanoTime() > deadlineNanos) {
+            stopStatus = SearchStatus.TIMEOUT;
+        }
+        return stopStatus != null;
+    }
+
+    /** Báo tiến độ cho observer (thuật toán tự cập nhật metrics, ví dụ HDA* gộp từ các worker). */
+    public void reportProgress() {
+        if (observing) observer.onProgress(metrics);
+    }
+
     /** Kiểm tra ngân sách bộ nhớ ước lượng theo số node đang giữ. */
     public boolean memoryExceeded(long nodesInMemory) {
         long max = budget.maxMemoryBytes();

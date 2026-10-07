@@ -104,6 +104,39 @@ class ExperimentRunnerTest {
     }
 
     @Test
+    void consensusReferenceOn4x4(@TempDir Path out) {
+        Dataset ds = Datasets.walk("tiny-4x4", Goal.standard(4), 4, 30, new Random(2), 2L);
+        ExperimentConfig cfg = new ExperimentConfig("consensus", "tiny-4x4", List.of("astar", "ida", "wastar:3"),
+                List.of("linear-conflict"), 1, 0, 20_000, 0, 0, 1, 2L, false, out);
+        ExperimentResult result = new ExperimentRunner().run(cfg, ds, null, null);
+        assertEquals(0, result.correctnessFailures());
+        for (RunRecord r : result.records()) {
+            assertTrue(r.optimalLength() >= 0, "4x4 phải có độ dài tham chiếu từ đồng thuận");
+            if (r.claimsOptimal()) assertEquals(Boolean.TRUE, r.optimalityOk());
+            else assertTrue(r.optimalityGap() >= 1.0 && r.optimalityGap() <= 3.0, "W-A* w=3: gap trong [1, 3]");
+        }
+    }
+
+    @Test
+    void consensusFlagsDisagreeingOptimalSolvers() {
+        Dataset ds = Datasets.walk("fake", Goal.standard(4), 1, 10, new Random(1), 1L);
+        RunRecord a = fake("astar", 20, true);
+        RunRecord b = fake("buggy", 22, true);
+        RunRecord c = fake("greedy", 30, false);
+        List<RunRecord> checked = ExperimentRunner.applyConsensus(List.of(a, b, c), ds);
+        assertEquals(Boolean.TRUE, checked.get(0).optimalityOk());
+        assertEquals(Boolean.FALSE, checked.get(1).optimalityOk(), "Thuật toán 'tối ưu' dài hơn tham chiếu phải bị đánh dấu");
+        assertNull(checked.get(2).optimalityOk());
+        assertEquals(1.5, checked.get(2).optimalityGap(), 1e-12);
+    }
+
+    private static RunRecord fake(String algorithm, int length, boolean claimsOptimal) {
+        com.example.npuzzleai.search.SearchMetrics m = new com.example.npuzzleai.search.SearchMetrics();
+        m.solutionLength = length;
+        return new RunRecord(1, algorithm, "h", 0, 1, SearchStatus.SOLVED, -1, true, null, m, "t", claimsOptimal);
+    }
+
+    @Test
     void statistics() {
         double[] v = {4, 1, 3, 2};
         assertEquals(2.5, Statistics.median(v), 1e-12);

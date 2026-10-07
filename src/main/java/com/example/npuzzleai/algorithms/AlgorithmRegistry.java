@@ -1,5 +1,6 @@
 package com.example.npuzzleai.algorithms;
 
+import com.example.npuzzleai.search.ConfigurableAlgorithm;
 import com.example.npuzzleai.search.SearchAlgorithm;
 
 import java.io.IOException;
@@ -47,6 +48,10 @@ public final class AlgorithmRegistry {
         r.define("rbfs", "rbfs", p -> new RecursiveBestFirstSearch());
         r.define("sma", "sma:" + SMAStarSearch.DEFAULT_MAX_NODES,
                 p -> new SMAStarSearch(p == null ? SMAStarSearch.DEFAULT_MAX_NODES : Integer.parseInt(p)));
+        r.define("hda", "hda:" + HashDistributedAStar.defaultWorkers(),
+                p -> new HashDistributedAStar(p == null ? HashDistributedAStar.defaultWorkers() : Integer.parseInt(p)));
+        r.define("mcts", "mcts:" + MonteCarloTreeSearch.DEFAULT_SIMULATIONS,
+                p -> new MonteCarloTreeSearch(p == null ? MonteCarloTreeSearch.DEFAULT_SIMULATIONS : Integer.parseInt(p)));
         r.loadProviders(ServiceLoader.load(SearchAlgorithm.class));
         return r;
     }
@@ -56,11 +61,25 @@ public final class AlgorithmRegistry {
         defaultSpecs.put(base, defaultSpec);
     }
 
-    /** Đăng ký một instance (plugin); mã của nó là {@code algorithm.id()}, không nhận tham số. */
+    /**
+     * Đăng ký một instance (plugin). Plugin thường dùng mã {@code algorithm.id()} cố định; plugin cài đặt
+     * {@link ConfigurableAlgorithm} được đăng ký theo mã gốc (trước dấu ':') và nhận tham số.
+     */
     public synchronized void register(SearchAlgorithm algorithm) {
         String id = algorithm.id();
-        factories.put(id, p -> algorithm);
-        defaultSpecs.put(id, id);
+        if (algorithm instanceof ConfigurableAlgorithm configurable) {
+            String base = baseOf(id);
+            factories.put(base, p -> p == null ? algorithm : configurable.configure(p));
+            defaultSpecs.put(base, id);
+        } else {
+            factories.put(id, p -> algorithm);
+            defaultSpecs.put(id, id);
+        }
+    }
+
+    private static String baseOf(String spec) {
+        int colon = spec.indexOf(':');
+        return colon < 0 ? spec : spec.substring(0, colon);
     }
 
     /** Tạo thuật toán theo mã, ví dụ "ida", "wastar:2.5". */
@@ -113,7 +132,8 @@ public final class AlgorithmRegistry {
         try {
             for (SearchAlgorithm algorithm : loader) {
                 synchronized (this) {
-                    if (factories.containsKey(algorithm.id())) continue;
+                    String key = algorithm instanceof ConfigurableAlgorithm ? baseOf(algorithm.id()) : algorithm.id();
+                    if (factories.containsKey(key)) continue;
                 }
                 register(algorithm);
                 count++;

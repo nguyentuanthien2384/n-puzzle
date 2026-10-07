@@ -1,13 +1,12 @@
 package com.example.npuzzleai.heuristics;
 
-import com.example.npuzzleai.WalkingDistance;
 import com.example.npuzzleai.core.Board;
 import com.example.npuzzleai.core.Goal;
 import com.example.npuzzleai.search.Heuristic;
 import com.example.npuzzleai.search.HeuristicProperties;
 
 /**
- * H7 - Walking Distance (Takahashi) trên API mới, dùng chung bảng tra với lớp {@link WalkingDistance}.
+ * H7 - Walking Distance (Takahashi) trên API mới, dùng chung bảng tra với lớp {@link WalkingDistanceTables}.
  * Bảng phụ thuộc hàng/cột đích của ô trống nên đúng với mọi đích. Chỉ hỗ trợ tới 4x4
  * (bảng 5x5 có hàng triệu trạng thái).
  */
@@ -34,8 +33,8 @@ public final class WalkingDistanceHeuristic implements Heuristic {
     @Override
     public void prepare(Goal goal) {
         int size = goal.size();
-        WalkingDistance.tableFor(size, goal.blankPosition() / size);
-        WalkingDistance.tableFor(size, goal.blankPosition() % size);
+        WalkingDistanceTables.tableFor(size, goal.blankPosition() / size);
+        WalkingDistanceTables.tableFor(size, goal.blankPosition() % size);
     }
 
     @Override
@@ -55,10 +54,10 @@ public final class WalkingDistanceHeuristic implements Heuristic {
             horizontal[i % size][goal.colOf(t)]++;
         }
         int blankGoal = goal.blankPosition();
-        int vd = WalkingDistance.tableFor(size, blankGoal / size)
-                .get(WalkingDistance.pack(vertical, board.blankRow(), size));
-        int hd = WalkingDistance.tableFor(size, blankGoal % size)
-                .get(WalkingDistance.pack(horizontal, board.blankCol(), size));
+        int vd = WalkingDistanceTables.tableFor(size, blankGoal / size)
+                .get(WalkingDistanceTables.pack(vertical, board.blankRow(), size));
+        int hd = WalkingDistanceTables.tableFor(size, blankGoal % size)
+                .get(WalkingDistanceTables.pack(horizontal, board.blankCol(), size));
         return Math.max(0, vd) + Math.max(0, hd);
     }
 

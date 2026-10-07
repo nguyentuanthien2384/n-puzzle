@@ -14,7 +14,11 @@ Phát triển theo tài liệu *"Hướng phát triển chuyên sâu cho dự á
 6. **Benchmark tái lập**: dataset có seed/checksum, warm-up, xáo thứ tự, executor riêng, manifest/environment/raw/summary/biểu đồ; JMH dự án riêng.
 7. **Search Lab** JavaFX (Task nền, dừng, tiến độ): Giải & Replay (lời giải + quá trình tìm kiếm, Teaching, heatmap), Compare Lab, Kiểm định heuristic, Experiment Manager.
 8. **CLI**, **CI** GitHub Actions + JaCoCo, benchmark đêm.
-9. Bổ sung: `WalkingDistance` dùng `ConcurrentHashMap` (không khoá toàn cục khi chạy song song).
+9. Bổ sung: bảng Walking Distance chuyển sang `heuristics.WalkingDistanceTables` (dùng `ConcurrentHashMap`, không khoá toàn cục khi chạy song song); lớp `WalkingDistance` cũ ủy quyền lại.
+10. **Nghiên cứu nâng cao (proof-of-concept)**: HDA\* song song đa nhân; MCTS/UCT baseline; heuristic mạng nơ-ron (MLP Java) + Focal Search giữ cận w × tối ưu; sinh puzzle đối kháng bằng tiến hoá. Gói `learning` tự đăng ký qua ServiceLoader nên phụ thuộc giữa các gói là một chiều.
+11. **Kiểm tra đồng thuận** trong benchmark 4x4: độ dài tham chiếu = ngắn nhất của các tổ hợp có cam kết tối ưu - phát hiện lỗi tối ưu khi không có oracle và tính optimality gap cho W-A\*/Focal.
+12. **Kiểm chứng**: 161 unit test đạt (chạy bằng JUnit Platform Launcher); probe JavaFX không cửa sổ xác nhận FXML, 6 tab Search Lab và luồng giải qua nút hoạt động; benchmark end-to-end `random-15p` 560 lần chạy không có lỗi tính đúng đắn.
+13. **Phát hiện thực nghiệm**: H5/H6 gốc admissible trên toàn bộ 3x3 nhưng không nhất quán (360 và 1.530 cạnh vi phạm) - A\* không reopen có thể mất tối ưu với hai heuristic này.
 
 ## Phát triển chuyên sâu (v2.0)
 

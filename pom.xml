@@ -8,7 +8,7 @@
     <artifactId>n-puzzle-ai</artifactId>
     <version>3.0.0</version>
     <name>N-Puzzle-AI</name>
-    <description>N-Puzzle Heuristic Search Research &amp; Teaching Platform: search engine độc lập JavaFX (A*, Weighted A*, IDA*, IDA*-TT, RBFS, SMA*, BFS...), heuristic có kiểm định vét cạn (Manhattan, Linear Conflict, Walking Distance, Pattern Database cộng được), benchmark tái lập, CLI và Search Lab JavaFX.</description>
+    <description>N-Puzzle Heuristic Search Research &amp; Teaching Platform: search engine độc lập JavaFX (A*, Weighted A*, IDA*, IDA*-TT, RBFS, SMA*, HDA*, Focal Search, MCTS, BFS...), heuristic có kiểm định vét cạn (Manhattan, Linear Conflict, Walking Distance, Pattern Database cộng được, heuristic mạng nơ-ron), sinh puzzle đối kháng, benchmark tái lập, CLI và Search Lab JavaFX.</description>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

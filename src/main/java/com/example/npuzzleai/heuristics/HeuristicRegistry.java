@@ -1,6 +1,7 @@
 package com.example.npuzzleai.heuristics;
 
 import com.example.npuzzleai.heuristics.pdb.AdditivePatternDatabaseHeuristic;
+import com.example.npuzzleai.search.ConfigurableHeuristic;
 import com.example.npuzzleai.search.Heuristic;
 
 import java.io.IOException;
@@ -92,9 +93,25 @@ public final class HeuristicRegistry {
         factories.put(base, factory);
     }
 
+    /**
+     * Đăng ký một instance (plugin). Plugin cài đặt {@link ConfigurableHeuristic} được đăng ký theo mã gốc
+     * (trước dấu ':') và nhận tham số, ví dụ {@code learned:models/m.model}.
+     */
     public synchronized void register(Heuristic heuristic) {
-        factories.put(heuristic.id(), p -> heuristic);
-        instances.put(heuristic.id(), heuristic);
+        String id = heuristic.id();
+        if (heuristic instanceof ConfigurableHeuristic configurable) {
+            String base = baseOf(id);
+            factories.put(base, p -> p == null ? heuristic : configurable.configure(p));
+            instances.put(base, heuristic);
+        } else {
+            factories.put(id, p -> heuristic);
+            instances.put(id, heuristic);
+        }
+    }
+
+    private static String baseOf(String spec) {
+        int colon = spec.indexOf(':');
+        return colon < 0 ? spec : spec.substring(0, colon);
     }
 
     /** Lấy heuristic theo mã (cache theo mã đầy đủ). */
@@ -160,7 +177,8 @@ public final class HeuristicRegistry {
         try {
             for (Heuristic h : loader) {
                 synchronized (this) {
-                    if (factories.containsKey(h.id())) continue;
+                    String key = h instanceof ConfigurableHeuristic ? baseOf(h.id()) : h.id();
+                    if (factories.containsKey(key)) continue;
                 }
                 register(h);
                 count++;

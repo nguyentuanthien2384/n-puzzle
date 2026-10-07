@@ -36,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class OptimalityRegressionTest {
     private static final SearchBudget BUDGET = SearchBudget.ofTimeout(30_000);
     private static final List<String> OPTIMAL_ALGORITHMS =
-            List.of("astar", "astar-noreopen", "ida", "ida-tt:8", "rbfs", "sma:200000");
+            List.of("astar", "astar-noreopen", "ida", "ida-tt:8", "rbfs", "sma:200000", "hda:3");
     private static final List<String> ADMISSIBLE_HEURISTICS =
             List.of("manhattan", "linear-conflict", "walking-distance", "apdb");
 

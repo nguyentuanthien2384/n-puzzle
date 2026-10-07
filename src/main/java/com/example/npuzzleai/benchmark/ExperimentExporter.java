@@ -73,6 +73,8 @@ public final class ExperimentExporter {
         dataset.put("seed", ds.seed());
         dataset.put("checksumCrc32", Long.toHexString(ds.checksum()));
         dataset.put("optimalLengthsKnown", ds.optimalLength() != null);
+        dataset.put("optimalReference", ds.optimalLength() != null ? "exact"
+                : "consensus (độ dài ngắn nhất của các tổ hợp có cam kết tối ưu)");
         m.put("dataset", dataset);
         m.put("algorithms", c.algorithms());
         m.put("heuristics", c.heuristics());

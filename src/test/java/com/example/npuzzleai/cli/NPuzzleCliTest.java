@@ -57,6 +57,25 @@ class NPuzzleCliTest {
     }
 
     @Test
+    void trainAndUseLearnedHeuristic(@TempDir Path dir) throws IOException {
+        Path model = dir.resolve("l3.model");
+        String out = run(0, "train-heuristic", "--size", "3", "--epochs", "3", "--out", model.toString());
+        assertTrue(out.contains("RMSE"));
+        assertTrue(Files.isRegularFile(model));
+        String solved = run(0, "solve", "--board", "1,2,3,4,5,6,0,7,8", "--algo", "astar", "--heuristic", "learned:" + model);
+        assertTrue(solved.contains("SOLVED"));
+    }
+
+    @Test
+    void adversarialCommandWritesDataset(@TempDir Path dir) throws IOException {
+        Path file = dir.resolve("adv.txt");
+        String out = run(0, "adversarial", "--size", "3", "--objective", "gap", "--population", "8",
+                "--generations", "3", "--top", "4", "--out", file.toString());
+        assertTrue(out.contains("Top 4"));
+        assertTrue(Files.readString(file).contains("# name=adversarial-heuristic_gap"));
+    }
+
+    @Test
     void unknownCommandFails() throws IOException {
         run(2, "khong-ton-tai");
     }

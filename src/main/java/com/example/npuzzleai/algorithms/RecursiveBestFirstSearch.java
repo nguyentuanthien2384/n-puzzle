@@ -101,11 +101,12 @@ public final class RecursiveBestFirstSearch implements SearchAlgorithm {
                 stack = bigger;
             }
 
-            Board[] children = new Board[3];
-            Move[] moves = new Move[3];
-            int[] hs = new int[3];
-            int[] fs = new int[3];
-            boolean[] entered = new boolean[3];
+            // Nút gốc không có nước đi trước nên có thể có tới 4 con; các nút khác tối đa 3.
+            Board[] children = new Board[Move.COUNT];
+            Move[] moves = new Move[Move.COUNT];
+            int[] hs = new int[Move.COUNT];
+            int[] fs = new int[Move.COUNT];
+            boolean[] entered = new boolean[Move.COUNT];
             int count = 0;
             int staticF = g + h;
             for (int d = 0; d < Move.COUNT; d++) {

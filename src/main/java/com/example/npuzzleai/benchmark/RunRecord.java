@@ -17,11 +17,13 @@ import java.util.Map;
  * @param instance      chỉ số instance trong dataset
  * @param repetition    lần lặp (bắt đầu từ 1)
  * @param status        trạng thái kết thúc
- * @param optimalLength độ dài tối ưu đã biết (-1 nếu chưa)
+ * @param optimalLength độ dài tối ưu tham chiếu (-1 nếu chưa biết): chính xác (3x3) hoặc đồng thuận của
+ *                      các tổ hợp có cam kết tối ưu (4x4 trở lên)
  * @param pathValid     chuỗi nước đi được kiểm chứng độc lập là tới đích
  * @param optimalityOk  null nếu không kiểm tra được; true/false nếu đã đối chiếu với độ dài tối ưu
  * @param metrics       toàn bộ bộ đếm
  * @param thread        tên luồng worker
+ * @param claimsOptimal tổ hợp có cam kết tối ưu (thuật toán tối ưu + heuristic khai báo admissible)
  */
 public record RunRecord(int runOrder,
                         String algorithm,
@@ -33,7 +35,14 @@ public record RunRecord(int runOrder,
                         boolean pathValid,
                         Boolean optimalityOk,
                         SearchMetrics metrics,
-                        String thread) {
+                        String thread,
+                        boolean claimsOptimal) {
+
+    /** Bản sao với độ dài tham chiếu và kết quả đối chiếu mới (dùng cho kiểm tra đồng thuận). */
+    public RunRecord withReference(int reference, Boolean ok) {
+        return new RunRecord(runOrder, algorithm, heuristic, instance, repetition, status, reference, pathValid, ok,
+                metrics, thread, claimsOptimal);
+    }
 
     public boolean solved() {
         return status == SearchStatus.SOLVED;
@@ -56,7 +65,8 @@ public record RunRecord(int runOrder,
 
     public static List<String> csvHeader() {
         List<String> header = new ArrayList<>(List.of("runOrder", "algorithm", "heuristic", "instance",
-                "repetition", "status", "optimalLength", "optimalityGap", "pathValid", "optimalityOk", "thread"));
+                "repetition", "status", "optimalLength", "optimalityGap", "pathValid", "claimsOptimal", "optimalityOk",
+                "thread"));
         header.addAll(new SearchMetrics().toMap().keySet());
         return header;
     }
@@ -73,6 +83,7 @@ public record RunRecord(int runOrder,
         double gap = optimalityGap();
         row.add(Double.isNaN(gap) ? "" : String.format(Locale.ROOT, "%.4f", gap));
         row.add(String.valueOf(pathValid));
+        row.add(String.valueOf(claimsOptimal));
         row.add(optimalityOk == null ? "" : String.valueOf(optimalityOk));
         row.add(thread);
         for (Map.Entry<String, Long> e : metrics.toMap().entrySet()) row.add(String.valueOf(e.getValue()));

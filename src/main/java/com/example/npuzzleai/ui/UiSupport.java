@@ -68,12 +68,19 @@ final class UiSupport {
         return Goal.parse(name, size);
     }
 
+    /** Tham số nhập trên giao diện cho các thuật toán có tham số. */
+    record AlgorithmParams(double weight, int smaNodes, int ttMegabytes, int workers, int simulations) {
+    }
+
     /** Ghép mã thuật toán với tham số từ các ô nhập. */
-    static String algorithmSpec(String base, double weight, int smaNodes, int ttMegabytes) {
+    static String algorithmSpec(String base, AlgorithmParams p) {
         return switch (base) {
-            case "wastar" -> "wastar:" + weight;
-            case "sma" -> "sma:" + smaNodes;
-            case "ida-tt" -> "ida-tt:" + ttMegabytes;
+            case "wastar" -> "wastar:" + p.weight();
+            case "focal" -> "focal:" + p.weight();
+            case "sma" -> "sma:" + p.smaNodes();
+            case "ida-tt" -> "ida-tt:" + p.ttMegabytes();
+            case "hda" -> "hda:" + p.workers();
+            case "mcts" -> "mcts:" + p.simulations();
             default -> base;
         };
     }

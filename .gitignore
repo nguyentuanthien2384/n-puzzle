@@ -1,4 +1,10 @@
-# ===== Maven =====
+# =============================================================================
+#  N-Puzzle AI - .gitignore
+#  Nguyên tắc: chỉ đẩy mã nguồn, tài liệu, cấu hình build và dữ liệu nhỏ cần để
+#  tái tạo kết quả. Mọi thứ build/dựng lại được hoặc mang tính cá nhân đều bỏ qua.
+# =============================================================================
+
+# ----- Maven: thư mục build (cả dự án chính lẫn benchmarks-jmh/) -----
 target/
 pom.xml.tag
 pom.xml.releaseBackup
@@ -10,24 +16,29 @@ buildNumber.properties
 .mvn/timing.properties
 .mvn/wrapper/maven-wrapper.jar
 !.mvn/wrapper/maven-wrapper.properties
+# Kho dependency cục bộ nếu chạy với -Dmaven.repo.local=.m2
+.m2/
 
-# ===== Java / JVM =====
+# ----- Java / JVM -----
 *.class
 *.jar
 *.war
 *.ear
 *.nar
-*.zip
-*.tar.gz
-*.rar
 hs_err_pid*
 replay_pid*
+# Heap dump và bản ghi JDK Flight Recorder (rất nặng)
 *.hprof
+*.jfr
 
-# ===== JavaFX / native packaging =====
+# ----- Gói phân phối / native packaging (jpackage, jlink) -----
 /build/
 /dist/
 /out/
+*.zip
+*.tar.gz
+*.rar
+*.7z
 *.dmg
 *.msi
 *.exe
@@ -35,14 +46,41 @@ replay_pid*
 *.rpm
 *.pkg
 
-# ===== IntelliJ IDEA =====
+# ----- Dữ liệu sinh ra khi chạy N-Puzzle Research Platform -----
+# Kết quả thí nghiệm: tái tạo được từ manifest.json + seed (cli benchmark).
+experiments/
+# Cache Pattern Database: dựng lại được (cli build-pdb), mỗi file có thể vài MB.
+pdb-cache/
+*.pdb
+# Plugin JAR do người dùng tự thả vào khi chạy.
+plugins/*.jar
+# Kết quả microbenchmark JMH.
+jmh-result.*
+# Lưu ý: models/*.model (mô hình heuristic học được, vài KB) VẪN được đẩy lên
+# để Focal Search / learned dùng ngay sau khi clone.
+
+# ----- Tài liệu nặng giữ cục bộ -----
+# Báo cáo Word (~1,4 MB, nhị phân - mỗi lần sửa Git lưu thêm một bản đầy đủ) không đẩy lên repo.
+docs/*.docx
+
+# ----- Log & báo cáo kiểm thử -----
+*.log
+logs/
+surefire-reports/
+failsafe-reports/
+test-output/
+jacoco.exec
+*.exec
+coverage/
+
+# ----- IDE & trình soạn thảo (cấu hình cá nhân) -----
+# IntelliJ IDEA
 .idea/
 *.iml
 *.ipr
 *.iws
 out/
-
-# ===== Eclipse =====
+# Eclipse
 .classpath
 .project
 .settings/
@@ -51,35 +89,28 @@ out/
 .springBeans
 .sts4-cache
 bin/
-
-# ===== NetBeans =====
+# NetBeans
 nbproject/private/
 nbbuild/
 nbdist/
 .nb-gradle/
-
-# ===== VS Code =====
-.vscode/
+# VS Code (giữ lại cấu hình dùng chung nếu có)
+.vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
-.classpath
-.project
+!.vscode/launch.json
+# ZCode
+.zcodeignore
+# Trợ lý AI (cấu hình cục bộ của từng máy)
+.claude/settings.local.json
+CLAUDE.local.md
 
-# ===== Gradle (phòng khi dùng thêm) =====
+# ----- Gradle (phòng khi dùng thêm) -----
 .gradle/
 gradle-app.setting
 !gradle-wrapper.jar
 
-# ===== Logs & báo cáo test =====
-*.log
-logs/
-surefire-reports/
-failsafe-reports/
-test-output/
-.coverage
-jacoco.exec
-
-# ===== Hệ điều hành =====
+# ----- Hệ điều hành -----
 .DS_Store
 .DS_Store?
 ._*
@@ -92,29 +123,21 @@ Desktop.ini
 $RECYCLE.BIN/
 *.lnk
 
-# ===== File tạm của Microsoft Office (Word/Excel) =====
+# ----- File tạm / sao lưu / merge -----
 ~$*.doc*
 ~$*.xls*
 ~$*.ppt*
 *.tmp
-
-# ===== File tạm / sao lưu khác =====
 *.bak
 *.swp
 *.swo
 *~
+*.orig
+*.rej
 .cache/
 
-# ===== Dữ liệu sinh ra khi chạy N-Puzzle Research Platform =====
-# Kết quả thí nghiệm (tái tạo được từ manifest.json + seed) và cache Pattern Database (dựng lại được).
-experiments/
-pdb-cache/
-*.pdb
-plugins/*.jar
-*.jfr
-
-# ===== Thông tin nhạy cảm =====
+# ----- Thông tin nhạy cảm -----
 .env
-.env.local
+.env.*
 *.local.properties
 secrets.properties

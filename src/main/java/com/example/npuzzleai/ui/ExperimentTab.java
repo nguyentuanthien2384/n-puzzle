@@ -146,6 +146,7 @@ final class ExperimentTab {
         log.setPrefRowCount(8);
         log.getStyleClass().add("mono");
         openBtn.setDisable(true);
+        openBtn.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE); // không bị đường dẫn dài bóp nhỏ
         openBtn.setOnAction(e -> openFolder());
         HBox charts = new HBox(10, expandedChart, timeChart);
         HBox.setHgrow(expandedChart, Priority.ALWAYS);

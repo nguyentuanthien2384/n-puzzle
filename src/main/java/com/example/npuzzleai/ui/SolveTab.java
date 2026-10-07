@@ -70,9 +70,14 @@ final class SolveTab {
     private final Spinner<Double> weight = UiSupport.doubleSpinner(1.0, 20.0, 1.5, 0.25);
     private final Spinner<Integer> smaNodes = UiSupport.intSpinner(16, 50_000_000, 100_000, 10_000);
     private final Spinner<Integer> ttMb = UiSupport.intSpinner(1, 4096, 64, 16);
+    private final Spinner<Integer> workers = UiSupport.intSpinner(1, 64,
+            com.example.npuzzleai.algorithms.HashDistributedAStar.defaultWorkers(), 1);
+    private final Spinner<Integer> simulations = UiSupport.intSpinner(10, 100_000, 300, 50);
     private final HBox weightRow = row("Trọng số w", weight);
     private final HBox smaRow = row("Số node tối đa", smaNodes);
     private final HBox ttRow = row("Bảng TT (MB)", ttMb);
+    private final HBox workersRow = row("Số worker", workers);
+    private final HBox simulationsRow = row("Mô phỏng / nước", simulations);
     private final ComboBox<String> heuristicBox = new ComboBox<>(FXCollections.observableArrayList(HeuristicRegistry.defaults().defaultIds()));
     private final Label algoInfo = UiSupport.hint("");
     private final Label heuristicInfo = UiSupport.hint("");
@@ -100,7 +105,7 @@ final class SolveTab {
     private final Label nodeLabel = new Label();
     private final Label explainLabel = UiSupport.hint("");
 
-    private final CheckBox teaching = new CheckBox("Teaching: màu theo Manhattan, viền đỏ = xung đột tuyến tính");
+    private final CheckBox teaching = new CheckBox("Chế độ Teaching: màu ô theo khoảng cách Manhattan, viền đỏ = xung đột tuyến tính");
     private final BoardView heatView = new BoardView(240);
     private final TextArea metricsArea = new TextArea();
 
@@ -176,7 +181,9 @@ final class SolveTab {
         uniformBtn.setOnAction(e -> setBoard(BoardGenerator.uniformSolvable(goal, new Random())));
         Button fromMainBtn = new Button("Lấy từ màn chính");
         fromMainBtn.setOnAction(e -> loadBoard(mainBoard.get(), mainGoal.get()));
-        for (Spinner<?> s : List.of(weight, smaNodes, ttMb, timeout, memoryMb, sampleEvery, walkSteps)) s.setPrefWidth(120);
+        for (Spinner<?> s : List.of(weight, smaNodes, ttMb, workers, simulations, timeout, memoryMb, sampleEvery, walkSteps)) {
+            s.setPrefWidth(120);
+        }
 
         GridPane boardGrid = new GridPane();
         boardGrid.setHgap(8);
@@ -191,7 +198,7 @@ final class SolveTab {
                 UiSupport.title("Bảng"), boardInput, boardGrid,
                 new HBox(6, randomBtn, uniformBtn), fromMainBtn,
                 new Separator(),
-                UiSupport.title("Thuật toán"), algoBox, weightRow, smaRow, ttRow, algoInfo,
+                UiSupport.title("Thuật toán"), algoBox, weightRow, smaRow, ttRow, workersRow, simulationsRow, algoInfo,
                 UiSupport.title("Heuristic"), heuristicBox, heuristicInfo,
                 new Separator(),
                 UiSupport.title("Ngân sách & trace"),
@@ -225,6 +232,8 @@ final class SolveTab {
         center.setMaxWidth(460);
         root.setCenter(center);
 
+        teaching.setWrapText(true);
+        teaching.setMaxWidth(330);
         metricsArea.setEditable(false);
         metricsArea.setPrefRowCount(22);
         metricsArea.getStyleClass().add("mono");
@@ -260,8 +269,9 @@ final class SolveTab {
             goal = UiSupport.goal(name, board.size());
             setBoard(board);
         });
-        algoBox.setOnAction(e -> updateAlgorithmControls());
-        heuristicBox.setOnAction(e -> updateHeuristicInfo());
+        // Lắng nghe valueProperty (không chỉ onAction) để mô tả luôn khớp, kể cả khi giá trị đổi bằng code.
+        algoBox.valueProperty().addListener((obs, o, n) -> updateAlgorithmControls());
+        heuristicBox.valueProperty().addListener((obs, o, n) -> updateHeuristicInfo());
         solveBtn.setOnAction(e -> startSolve());
         cancelBtn.setOnAction(e -> cancelRequested = true);
         teaching.setOnAction(e -> boardView.setOverlay(teaching.isSelected() ? BoardView.Overlay.TEACHING : BoardView.Overlay.NONE));
@@ -315,12 +325,11 @@ final class SolveTab {
     private void updateAlgorithmControls() {
         String base = algoBox.getValue();
         if (base == null) return;
-        weightRow.setVisible(base.equals("wastar"));
-        weightRow.setManaged(base.equals("wastar"));
-        smaRow.setVisible(base.equals("sma"));
-        smaRow.setManaged(base.equals("sma"));
-        ttRow.setVisible(base.equals("ida-tt"));
-        ttRow.setManaged(base.equals("ida-tt"));
+        showRow(weightRow, base.equals("wastar") || base.equals("focal"));
+        showRow(smaRow, base.equals("sma"));
+        showRow(ttRow, base.equals("ida-tt"));
+        showRow(workersRow, base.equals("hda"));
+        showRow(simulationsRow, base.equals("mcts"));
         SearchAlgorithm algo = AlgorithmRegistry.defaults().create(currentSpec());
         heuristicBox.setDisable(!algo.properties().usesHeuristic());
         algoInfo.setText(algo.description() + (algo.properties().optimalWithAdmissibleHeuristic()
@@ -336,8 +345,14 @@ final class SolveTab {
         heuristicInfo.setText("[" + p.flags() + "] " + p.note() + support);
     }
 
+    private static void showRow(HBox row, boolean visible) {
+        row.setVisible(visible);
+        row.setManaged(visible);
+    }
+
     private String currentSpec() {
-        return UiSupport.algorithmSpec(algoBox.getValue(), weight.getValue(), smaNodes.getValue(), ttMb.getValue());
+        return UiSupport.algorithmSpec(algoBox.getValue(), new UiSupport.AlgorithmParams(weight.getValue(),
+                smaNodes.getValue(), ttMb.getValue(), workers.getValue(), simulations.getValue()));
     }
 
     private void startSolve() {

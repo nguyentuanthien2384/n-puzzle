@@ -19,6 +19,9 @@ import com.example.npuzzleai.heuristics.pdb.PatternDatabase;
 import com.example.npuzzleai.heuristics.pdb.PatternDatabaseBuilder;
 import com.example.npuzzleai.heuristics.pdb.PatternDefinition;
 import com.example.npuzzleai.heuristics.pdb.PdbStore;
+import com.example.npuzzleai.learning.FeatureExtractor;
+import com.example.npuzzleai.learning.HeuristicTrainer;
+import com.example.npuzzleai.research.AdversarialGenerator;
 import com.example.npuzzleai.search.Heuristic;
 import com.example.npuzzleai.search.SearchAlgorithm;
 import com.example.npuzzleai.search.SearchBudget;
@@ -91,6 +94,8 @@ public final class NPuzzleCli {
             case "dataset" -> dataset(opt);
             case "build-pdb" -> buildPdb(opt);
             case "plugins" -> plugins(opt);
+            case "train-heuristic" -> trainHeuristic(opt);
+            case "adversarial" -> adversarial(opt);
             default -> {
                 out.println("Lệnh không hợp lệ: " + args[0]);
                 printHelp();
@@ -118,8 +123,16 @@ public final class NPuzzleCli {
                   dataset --name <tên> [--seed s] --out file.txt   Xuất dataset dựng sẵn
                   build-pdb --size 4 [--goal ...] [--partition "1,2,3;4,5,6"] [--dir pdb-cache]
                   plugins --dir plugins                    Nạp JAR plugin và liệt kê
+                  train-heuristic --size 3|4 [--out models/learned-4x4.model] [--instances 300]
+                      [--min-walk 20] [--max-walk 70] [--hidden 16] [--epochs 25] [--seed s] [--no-pdb-feature]
+                                                           Huấn luyện heuristic mạng nơ-ron
+                  adversarial --size 3|4 [--objective expansions|gap] [--algo astar] [--heuristic manhattan]
+                      [--population 30] [--generations 20] [--mutation 6] [--node-budget 200000]
+                      [--seed s] [--top 10] [--out adversarial.txt]
+                                                           Sinh puzzle khiến heuristic/solver gặp ca xấu
 
-                Mã có tham số: wastar:2.0, sma:50000, ida-tt:64, apdb:1,2,5,6,9;3,4,7,8,11;10,12,13,14,15
+                Mã có tham số: wastar:2.0, sma:50000, ida-tt:64, hda:4, mcts:300, focal:1.5, focal:2:linear-conflict,
+                               apdb:1,2,5,6,9;3,4,7,8,11;10,12,13,14,15, learned:models/learned-4x4.model
                 Dataset dựng sẵn: """ + String.join(", ", Datasets.builtInNames().keySet()));
     }
 
@@ -326,6 +339,67 @@ public final class NPuzzleCli {
         int h = HeuristicRegistry.defaults().loadPlugins(dir);
         out.println("Đã nạp " + a + " thuật toán và " + h + " heuristic từ " + dir.toAbsolutePath());
         return list();
+    }
+
+    private int trainHeuristic(Map<String, String> opt) throws IOException {
+        int size = intOpt(opt, "size", 3);
+        Goal goal = Goal.parse(opt.getOrDefault("goal", Goal.STANDARD), size);
+        HeuristicTrainer.Options defaults = HeuristicTrainer.Options.defaults();
+        HeuristicTrainer.Options options = new HeuristicTrainer.Options(intOpt(opt, "hidden", defaults.hidden()),
+                intOpt(opt, "epochs", defaults.epochs()), defaults.batchSize(), defaults.learningRate(),
+                intOpt(opt, "max-samples", defaults.maxSamples()), longOpt(opt, "seed", defaults.seed()));
+        HeuristicTrainer.Report report;
+        if (size <= 3) {
+            out.println("Huấn luyện trên nhãn h* chính xác của toàn bộ không gian " + size + "x" + size + "...");
+            report = HeuristicTrainer.trainExact(goal, options);
+        } else {
+            int instances = intOpt(opt, "instances", 300);
+            out.println("Giải tối ưu " + instances + " bài (IDA* + PDB) để lấy nhãn...");
+            FeatureExtractor.FeatureSet set = opt.containsKey("no-pdb-feature")
+                    ? FeatureExtractor.FeatureSet.BASIC : FeatureExtractor.FeatureSet.BASIC_PDB;
+            report = HeuristicTrainer.trainFromSolver(goal, instances, intOpt(opt, "min-walk", 20),
+                    intOpt(opt, "max-walk", 70), set, options, n -> {
+                        if (n % 50 == 0) out.println("  đã giải " + n + " bài");
+                    });
+        }
+        out.println("Kết quả: " + report);
+        Path file = Path.of(opt.getOrDefault("out", "models/learned-" + size + "x" + size + ".model"));
+        report.model().save(file);
+        out.println("Đã lưu mô hình: " + file.toAbsolutePath());
+        out.println("Dùng: --heuristic learned:" + file + "   hoặc   --algo focal:1.5 (mặc định đọc models/learned-NxN.model)");
+        return 0;
+    }
+
+    private int adversarial(Map<String, String> opt) throws IOException {
+        int size = intOpt(opt, "size", 3);
+        Goal goal = Goal.parse(opt.getOrDefault("goal", Goal.STANDARD), size);
+        AdversarialGenerator.Objective objective = opt.getOrDefault("objective", "expansions").startsWith("gap")
+                ? AdversarialGenerator.Objective.HEURISTIC_GAP : AdversarialGenerator.Objective.EXPANSIONS;
+        AdversarialGenerator.Config config = new AdversarialGenerator.Config(goal, objective,
+                opt.getOrDefault("algo", "astar"), opt.getOrDefault("heuristic", "manhattan"),
+                intOpt(opt, "population", 30), intOpt(opt, "generations", 20), intOpt(opt, "mutation", 6),
+                longOpt(opt, "node-budget", 200_000), longOpt(opt, "seed", Datasets.DEFAULT_SEED));
+        out.printf("Tiến hoá %s cho %s + %s trên %dx%d (quần thể %d, %d thế hệ)%n", objective, config.algorithm(),
+                config.heuristic(), size, size, config.population(), config.generations());
+        AdversarialGenerator generator = new AdversarialGenerator(config);
+        List<AdversarialGenerator.Candidate> result = generator.run((gen, best, mean) ->
+                out.printf(Locale.ROOT, "  thế hệ %3d: tốt nhất %.0f, trung bình %.1f%n", gen, best.fitness(), mean), null);
+        int top = Math.min(intOpt(opt, "top", 10), result.size());
+        out.printf("%nTop %d (đã đánh giá %d trạng thái):%n", top, generator.evaluations());
+        out.printf("%-10s %6s %6s %10s  %s%n", "fitness", "h", "h*", "expanded", "trạng thái");
+        for (int i = 0; i < top; i++) {
+            AdversarialGenerator.Candidate c = result.get(i);
+            out.printf(Locale.ROOT, "%-10.0f %6d %6s %,10d  %s%n", c.fitness(), c.heuristicValue(),
+                    c.optimalLength() < 0 ? "?" : String.valueOf(c.optimalLength()), c.expanded(), c.board());
+        }
+        if (opt.containsKey("out")) {
+            Dataset ds = AdversarialGenerator.toDataset("adversarial-" + objective.name().toLowerCase(Locale.ROOT),
+                    goal, result.subList(0, top), config.seed());
+            Path file = Path.of(opt.get("out"));
+            Datasets.write(ds, file);
+            out.println("\nĐã ghi dataset: " + file.toAbsolutePath() + "  (benchmark: --dataset file:" + file + ")");
+        }
+        return 0;
     }
 
     static Map<String, String> parseOptions(String[] args) {

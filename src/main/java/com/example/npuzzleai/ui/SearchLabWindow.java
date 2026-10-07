@@ -15,7 +15,7 @@ import java.util.function.Supplier;
 
 /**
  * Cửa sổ "Search Lab" - biến ứng dụng thành phòng thí nghiệm heuristic search:
- * Giải &amp; Replay, Compare Lab, Kiểm định heuristic, Experiment Manager.
+ * Giải &amp; Replay, Compare Lab, Kiểm định heuristic, Experiment Manager, Sinh puzzle khó, Học heuristic.
  * Mọi tab gọi cùng search engine với CLI và benchmark.
  */
 public final class SearchLabWindow {
@@ -29,12 +29,21 @@ public final class SearchLabWindow {
         CompareTab compareTab = new CompareTab(solveTab::board, solveTab::goal);
         VerifierTab verifierTab = new VerifierTab();
         ExperimentTab experimentTab = new ExperimentTab();
+        LearningTab learningTab = new LearningTab();
 
-        TabPane tabs = new TabPane(
-                tab("Giải & Replay", solveTab.node()),
+        Tab solve = tab("Giải & Replay", solveTab.node());
+        TabPane tabs = new TabPane();
+        AdversarialTab adversarialTab = new AdversarialTab((board, goal) -> {
+            solveTab.loadBoard(board, goal);
+            tabs.getSelectionModel().select(solve);
+        });
+        tabs.getTabs().addAll(
+                solve,
                 tab("So sánh (Compare Lab)", compareTab.node()),
                 tab("Kiểm định heuristic", verifierTab.node()),
-                tab("Thí nghiệm (Experiment)", experimentTab.node()));
+                tab("Thí nghiệm (Experiment)", experimentTab.node()),
+                tab("Sinh puzzle khó", adversarialTab.node()),
+                tab("Học heuristic", learningTab.node()));
         Scene scene = new Scene(tabs, 1320, 860);
         URL css = SearchLabWindow.class.getResource("/com/example/npuzzleai/lab.css");
         if (css != null) scene.getStylesheets().add(css.toExternalForm());
