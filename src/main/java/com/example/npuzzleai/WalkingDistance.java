@@ -1,7 +1,7 @@
 package com.example.npuzzleai;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Heuristic Walking Distance (Ken'ichiro Takahashi).
@@ -19,13 +19,16 @@ import java.util.Map;
  */
 public final class WalkingDistance {
     /** Bảng tra theo (kích thước bảng, chỉ số hàng/cột đích của ô trống). */
-    private static final Map<Long, LongByteTable> TABLES = new HashMap<>();
+    private static final Map<Long, LongByteTable> TABLES = new ConcurrentHashMap<>();
 
     private WalkingDistance() {
     }
 
-    /** Lấy (và dựng nếu chưa có) bảng Walking Distance cho kích thước và lớp đích của ô trống. */
-    public static synchronized LongByteTable tableFor(int size, int blankGoalLine) {
+    /**
+     * Lấy (và dựng nếu chưa có) bảng Walking Distance cho kích thước và lớp đích của ô trống.
+     * ConcurrentHashMap thay cho synchronized để benchmark song song không tranh khoá mỗi lần tra.
+     */
+    public static LongByteTable tableFor(int size, int blankGoalLine) {
         long key = ((long) size << 8) | blankGoalLine;
         return TABLES.computeIfAbsent(key, k -> buildTable(size, blankGoalLine));
     }
@@ -107,7 +110,7 @@ public final class WalkingDistance {
     }
 
     /** Nén ma trận đếm thành khoá 64 bit: 3 bit/cột đầu cho mỗi hàng + 3 bit hàng trống. */
-    private static long pack(byte[][] matrix, int blankLine, int size) {
+    public static long pack(byte[][] matrix, int blankLine, int size) {
         long key = blankLine;
         int shift = 3;
         for (int i = 0; i < size; i++) {

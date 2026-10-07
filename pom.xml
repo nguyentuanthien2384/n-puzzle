@@ -6,15 +6,19 @@
 
     <groupId>com.example</groupId>
     <artifactId>n-puzzle-ai</artifactId>
-    <version>2.0.0</version>
+    <version>3.0.0</version>
     <name>N-Puzzle-AI</name>
-    <description>N-Puzzle bằng JavaFX: BFS, A*, IDA*, Greedy, Bidirectional BFS, Value Iteration, Hill Climbing, Simulated Annealing, Genetic Algorithm với 9 heuristic (Manhattan, Linear Conflict, Walking Distance, Pattern Database)</description>
+    <description>N-Puzzle Heuristic Search Research &amp; Teaching Platform: search engine độc lập JavaFX (A*, Weighted A*, IDA*, IDA*-TT, RBFS, SMA*, BFS...), heuristic có kiểm định vét cạn (Manhattan, Linear Conflict, Walking Distance, Pattern Database cộng được), benchmark tái lập, CLI và Search Lab JavaFX.</description>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>17</maven.compiler.release>
         <javafx.version>17.0.12</javafx.version>
         <junit.version>5.10.2</junit.version>
+        <jacoco.version>0.8.12</jacoco.version>
+        <cli.mainClass>com.example.npuzzleai.cli.NPuzzleCli</cli.mainClass>
+        <!-- JaCoCo ghi đè khi chạy; giá trị rỗng giữ @{argLine} hợp lệ khi -Djacoco.skip=true. -->
+        <argLine/>
     </properties>
 
     <dependencies>
@@ -38,6 +42,24 @@
     </dependencies>
 
     <build>
+        <resources>
+            <!-- Ảnh/FXML/CSS không được filter (tránh hỏng file nhị phân). -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>**/build.properties</exclude>
+                </excludes>
+            </resource>
+            <!-- build.properties nhận phiên bản dự án/dependency để ghi vào environment.json của thí nghiệm. -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>**/build.properties</include>
+                </includes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -49,11 +71,49 @@
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
                 <configuration>
                     <useModulePath>false</useModulePath>
+                    <!-- Cache PDB của test nằm trong target/ thay vì thư mục dự án. -->
+                    <systemPropertyVariables>
+                        <npuzzle.pdb.dir>${project.build.directory}/pdb-cache</npuzzle.pdb.dir>
+                    </systemPropertyVariables>
+                    <argLine>@{argLine} -Xmx1g</argLine>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                        <configuration>
+                            <excludes>
+                                <!-- Lớp giao diện JavaFX không chạy trong unit test. -->
+                                <exclude>com/example/npuzzleai/ui/**</exclude>
+                                <exclude>com/example/npuzzleai/N_Puzzle*</exclude>
+                                <exclude>com/example/npuzzleai/HandleImage*</exclude>
+                            </excludes>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.openjfx</groupId>
@@ -61,6 +121,16 @@
                 <version>0.0.8</version>
                 <configuration>
                     <mainClass>com.example.npuzzleai/com.example.npuzzleai.N_PuzzleApplication</mainClass>
+                </configuration>
+            </plugin>
+            <!-- CLI: mvn -q compile exec:java -Dexec.args="verify" -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.1</version>
+                <configuration>
+                    <mainClass>${cli.mainClass}</mainClass>
+                    <cleanupDaemonThreads>false</cleanupDaemonThreads>
                 </configuration>
             </plugin>
         </plugins>

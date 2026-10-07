@@ -53,6 +53,10 @@
             <RadioMenuItem fx:id="heuristic8" mnemonicParsing="false" onAction="#onChangeAlgorithm" text="A* H8" toggleGroup="$algorithmToggle" />
             <RadioMenuItem fx:id="heuristic9" mnemonicParsing="false" onAction="#onChangeAlgorithm" text="A* PDB" toggleGroup="$algorithmToggle" />
             <RadioMenuItem fx:id="ida" mnemonicParsing="false" onAction="#onChangeAlgorithm" text="IDA*" toggleGroup="$algorithmToggle" />
+            <RadioMenuItem fx:id="idatt" mnemonicParsing="false" onAction="#onChangeAlgorithm" text="IDA*-TT" toggleGroup="$algorithmToggle" />
+            <RadioMenuItem fx:id="rbfs" mnemonicParsing="false" onAction="#onChangeAlgorithm" text="RBFS" toggleGroup="$algorithmToggle" />
+            <RadioMenuItem fx:id="sma" mnemonicParsing="false" onAction="#onChangeAlgorithm" text="SMA*" toggleGroup="$algorithmToggle" />
+            <RadioMenuItem fx:id="wastar" mnemonicParsing="false" onAction="#onChangeAlgorithm" text="W-A* 1.5" toggleGroup="$algorithmToggle" />
             <RadioMenuItem fx:id="greedy" mnemonicParsing="false" onAction="#onChangeAlgorithm" text="Greedy" toggleGroup="$algorithmToggle" />
             <RadioMenuItem fx:id="bibfs" mnemonicParsing="false" onAction="#onChangeAlgorithm" text="Bi-BFS" toggleGroup="$algorithmToggle" />
             <RadioMenuItem fx:id="valueiter" mnemonicParsing="false" onAction="#onChangeAlgorithm" text="Val.Iter" toggleGroup="$algorithmToggle" />
@@ -64,7 +68,8 @@
       <Label layoutX="70.0" layoutY="491.0" text="Thuật toán" />
       <Label layoutX="99.0" layoutY="541.0" text="Bước" />
       <TextField fx:id="stepField" alignment="CENTER" cacheShape="false" centerShape="false" editable="false" focusTraversable="false" layoutX="158.0" layoutY="534.0" pickOnBounds="false" prefHeight="30.0" prefWidth="84.0" scaleShape="false" text="0" />
-      <ProgressBar fx:id="progressBar" layoutX="57.0" layoutY="595.0" prefHeight="20.0" prefWidth="165.0" />
+      <Button fx:id="labBtn" layoutX="40.0" layoutY="574.0" mnemonicParsing="false" onAction="#onOpenLabClick" prefHeight="28.0" prefWidth="200.0" text="Search Lab (nghiên cứu)" />
+      <ProgressBar fx:id="progressBar" layoutX="57.0" layoutY="612.0" prefHeight="16.0" prefWidth="165.0" />
       <Separator layoutX="280.0" orientation="VERTICAL" prefHeight="640.0" />
    </Pane>
    <Pane layoutX="280.0" prefHeight="640.0" prefWidth="560.0">

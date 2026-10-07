@@ -2,6 +2,20 @@
 
 Bản này được hoàn thiện từ source và báo cáo được cung cấp, giữ nguyên phạm vi đề tài N-Puzzle: BFS, A* và 6 heuristic. Ở phiên bản 2.0, dự án được mở rộng thêm nhóm thuật toán tìm kiếm chuyên sâu chuẩn giáo trình Trí tuệ nhân tạo (Russell & Norvig; Korf; Korf & Felner; Takahashi).
 
+## Nền tảng nghiên cứu & giảng dạy (v3.0)
+
+Phát triển theo tài liệu *"Hướng phát triển chuyên sâu cho dự án N-Puzzle Java 17 + Maven + JavaFX"*. Chi tiết: `docs/RESEARCH_PLATFORM.md`.
+
+1. **Kiến trúc**: search engine độc lập JavaFX (gói `core`, `search`, `algorithms`, `heuristics`, `verify`, `benchmark`, `cli`); JavaFX chỉ là một client. GUI, CLI, benchmark và test gọi cùng code path.
+2. **Goal tổng quát + khả giải tổng quát**: mọi heuristic/PDB nhận `Goal`, không giả định đích cố định; kiểm tra khả giải bằng parity hoán vị so với parity khoảng cách ô trống (đúng với mọi đích, mọi kích thước).
+3. **Thuật toán**: A\* với chính sách reopen/tie-break cấu hình được, Weighted A\*, Greedy, IDA\* + IDA\*-TT, RBFS, SMA\*, BFS — cùng một `SearchContext` đo metrics theo một định nghĩa.
+4. **Heuristic có khai báo tính chất** và **kiểm định vét cạn 3x3** (h ≤ h\*, nhất quán, độ chính xác, phản ví dụ). H5/H6 gốc chuyển sang nhãn thử nghiệm.
+5. **Pattern Database tổng quát**: partition cấu hình được, additive PDB có kiểm tra rời nhau, metadata + CRC32, file `.pdb`, cache đĩa.
+6. **Benchmark tái lập**: dataset có seed/checksum, warm-up, xáo thứ tự, executor riêng, manifest/environment/raw/summary/biểu đồ; JMH dự án riêng.
+7. **Search Lab** JavaFX (Task nền, dừng, tiến độ): Giải & Replay (lời giải + quá trình tìm kiếm, Teaching, heatmap), Compare Lab, Kiểm định heuristic, Experiment Manager.
+8. **CLI**, **CI** GitHub Actions + JaCoCo, benchmark đêm.
+9. Bổ sung: `WalkingDistance` dùng `ConcurrentHashMap` (không khoá toàn cục khi chạy song song).
+
 ## Phát triển chuyên sâu (v2.0)
 
 ### Heuristic mới (State.java)

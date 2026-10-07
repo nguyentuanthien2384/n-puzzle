@@ -105,6 +105,14 @@ $RECYCLE.BIN/
 *~
 .cache/
 
+# ===== Dữ liệu sinh ra khi chạy N-Puzzle Research Platform =====
+# Kết quả thí nghiệm (tái tạo được từ manifest.json + seed) và cache Pattern Database (dựng lại được).
+experiments/
+pdb-cache/
+*.pdb
+plugins/*.jar
+*.jfr
+
 # ===== Thông tin nhạy cảm =====
 .env
 .env.local

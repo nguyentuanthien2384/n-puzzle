@@ -1,5 +1,16 @@
 package com.example.npuzzleai;
 
+import com.example.npuzzleai.algorithms.AlgorithmRegistry;
+import com.example.npuzzleai.core.Board;
+import com.example.npuzzleai.core.Goal;
+import com.example.npuzzleai.core.PuzzleProblem;
+import com.example.npuzzleai.heuristics.HeuristicRegistry;
+import com.example.npuzzleai.search.Heuristic;
+import com.example.npuzzleai.search.SearchAlgorithm;
+import com.example.npuzzleai.search.SearchBudget;
+import com.example.npuzzleai.search.SearchObserver;
+import com.example.npuzzleai.search.SearchResult;
+import com.example.npuzzleai.ui.SearchLabWindow;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -55,6 +66,8 @@ public class N_PuzzleController implements Initializable, Runnable {
     @FXML
     private Button compareBtn;
     @FXML
+    private Button labBtn;
+    @FXML
     private SplitMenuButton sizeMenu;
     @FXML
     private SplitMenuButton algorithmMenu;
@@ -87,6 +100,8 @@ public class N_PuzzleController implements Initializable, Runnable {
     private long startTime;
     private String error;
     private final Vector<Result> compareResults = new Vector<>();
+    /** Cờ hủy cho các thuật toán chạy qua search engine mới (RBFS, SMA*, W-A*, IDA*-TT). */
+    private volatile boolean engineCancelled = false;
 
     @Override
     // Trạng thái khởi tạo ban đầu
@@ -194,6 +209,11 @@ public class N_PuzzleController implements Initializable, Runnable {
             }
             // IDA* và Greedy dùng heuristic đang chọn trước đó.
             case "ida" -> algorithm = "IDA*";
+            // Các thuật toán của search engine mới cũng dùng heuristic H1-H9 đang chọn.
+            case "idatt" -> algorithm = "IDA*-TT";
+            case "rbfs" -> algorithm = "RBFS";
+            case "sma" -> algorithm = "SMA*";
+            case "wastar" -> algorithm = "Weighted A*";
             case "greedy" -> algorithm = "Greedy";
             case "bibfs" -> algorithm = "Bi-BFS";
             case "valueiter" -> algorithm = "Value Iteration";
@@ -273,6 +293,7 @@ public class N_PuzzleController implements Initializable, Runnable {
     }
     // Xoá cờ dừng của mọi thuật toán trước khi giải mới
     private void resetStopFlags() {
+        engineCancelled = false;
         BFS.stop = false;
         AStar.stop = false;
         IDAStar.stop = false;
@@ -285,6 +306,7 @@ public class N_PuzzleController implements Initializable, Runnable {
     }
     // Yêu cầu dừng mọi thuật toán đang chạy
     private void stopAllSolvers() {
+        engineCancelled = true;
         BFS.stop = true;
         AStar.stop = true;
         IDAStar.stop = true;
@@ -294,6 +316,12 @@ public class N_PuzzleController implements Initializable, Runnable {
         HillClimbing.stop = true;
         SimulatedAnnealing.stop = true;
         GeneticAlgorithm.stop = true;
+    }
+    // Mở cửa sổ Search Lab với bảng và đích hiện tại
+    public void onOpenLabClick() {
+        SearchLabWindow.show(labBtn.getScene().getWindow(),
+                () -> Board.fromArray(state.value.clone()),
+                () -> Goal.of(Board.fromArray(goalState.value.clone())));
     }
     // Button so sánh Heuristic
     public void onCompareBtnClick() {
@@ -504,12 +532,38 @@ public class N_PuzzleController implements Initializable, Runnable {
         solveTime = solver.time;
         error = solver.error;
     }
+    /**
+     * Giải bằng search engine mới (cùng code path với Search Lab, CLI và benchmark),
+     * dùng heuristic H1-H9 đang chọn và giới hạn 60 giây như các thuật toán cũ.
+     */
+    public void solveWithEngine(String algorithmSpec) {
+        SearchAlgorithm solver = AlgorithmRegistry.defaults().create(algorithmSpec);
+        Heuristic heuristic = HeuristicRegistry.defaults().create(HeuristicRegistry.legacyId(State.heuristic));
+        Board start = Board.fromArray(state.value.clone());
+        Goal goal = Goal.of(Board.fromArray(goalState.value.clone()));
+        if (solver.properties().usesHeuristic() && heuristic.supports(size)) heuristic.prepare(goal);
+        SearchResult r = solver.solve(new PuzzleProblem(start, goal), heuristic, SearchBudget.DEFAULT,
+                SearchObserver.cancellable(() -> engineCancelled));
+        Vector<int[]> path = new Vector<>();
+        if (r.solved()) {
+            for (Board b : r.path()) path.add(b.toArray());
+        }
+        result = path;
+        approvedNodes = (int) Math.min(Integer.MAX_VALUE, r.metrics().expanded);
+        totalNodes = (int) Math.min(Integer.MAX_VALUE, r.metrics().generated);
+        solveTime = r.metrics().wallTimeNs / 1_000_000L;
+        error = r.solved() ? null : r.message();
+    }
     // Luồng tìm kiếm lời giải
     public Thread solveThread() {
         return new Thread(() -> {
             switch (algorithm) {
                 case "BFS" -> solveBFS();
                 case "IDA*" -> solveIDAStar();
+                case "IDA*-TT" -> solveWithEngine("ida-tt:64");
+                case "RBFS" -> solveWithEngine("rbfs");
+                case "SMA*" -> solveWithEngine("sma:" + 200_000);
+                case "Weighted A*" -> solveWithEngine("wastar:1.5");
                 case "Greedy" -> solveGreedy();
                 case "Bi-BFS" -> solveBidirectional();
                 case "Value Iteration" -> solveValueIteration();
@@ -635,6 +689,10 @@ public class N_PuzzleController implements Initializable, Runnable {
         return switch (algorithm) {
             case "BFS" -> "BFS (tìm kiếm theo chiều rộng)";
             case "IDA*" -> "IDA* với Heuristic " + heuristicName(State.heuristic);
+            case "IDA*-TT" -> "IDA* + bảng chuyển vị 64 MB với Heuristic " + heuristicName(State.heuristic);
+            case "RBFS" -> "RBFS (Recursive Best-First) với Heuristic " + heuristicName(State.heuristic);
+            case "SMA*" -> "SMA* (giới hạn 200.000 node) với Heuristic " + heuristicName(State.heuristic);
+            case "Weighted A*" -> "Weighted A* (w = 1.5) với Heuristic " + heuristicName(State.heuristic);
             case "Greedy" -> "Greedy Best-First với Heuristic " + heuristicName(State.heuristic);
             case "Bi-BFS" -> "Bidirectional BFS (tìm kiếm hai chiều)";
             case "Value Iteration" -> "Value Iteration - lặp giá trị trên MDP";

@@ -1,0 +1,38 @@
+.root {
+    -fx-font-size: 13px;
+}
+.section-title {
+    -fx-font-weight: bold;
+    -fx-font-size: 13.5px;
+    -fx-text-fill: #1f2937;
+    -fx-padding: 4 0 0 0;
+}
+.hint {
+    -fx-text-fill: #6b7280;
+    -fx-font-size: 12px;
+}
+.mono {
+    -fx-font-family: "Consolas", "Menlo", "Monospaced";
+    -fx-font-size: 12.5px;
+}
+.button {
+    -fx-background-color: #2b7de9;
+    -fx-text-fill: white;
+    -fx-background-radius: 5;
+}
+.button:hover {
+    -fx-background-color: #1f6bd1;
+}
+.button:disabled {
+    -fx-opacity: 0.45;
+}
+.toggle-button:selected {
+    -fx-background-color: #2b7de9;
+    -fx-text-fill: white;
+}
+.tab-pane .tab-header-area .tab-header-background {
+    -fx-background-color: #f3f4f6;
+}
+.tab:selected .tab-label {
+    -fx-font-weight: bold;
+}

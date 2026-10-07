@@ -1,0 +1,55 @@
+name: Nightly benchmark
+
+# Benchmark đầy đủ tốn thời gian và nhiễu trên máy CI dùng chung, nên chỉ chạy theo lịch
+# hoặc thủ công - con số thời gian chỉ dùng để so sánh tương đối giữa các commit.
+on:
+  schedule:
+    - cron: '0 19 * * *'   # 02:00 giờ Việt Nam
+  workflow_dispatch:
+    inputs:
+      dataset:
+        description: 'Dataset (random-15p, hard-15p, random-24p, ...)'
+        default: 'random-15p'
+      algos:
+        description: 'Thuật toán'
+        default: 'astar,ida,ida-tt:64,rbfs,sma:500000'
+      heuristics:
+        description: 'Heuristic'
+        default: 'manhattan,linear-conflict,walking-distance,apdb'
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Compile
+        run: mvn -B -ntp -q compile
+
+      - name: Exhaustive heuristic verification
+        run: mvn -B -ntp -q exec:java -Dexec.args="verify --csv target/heuristic-verification.csv"
+
+      - name: Benchmark
+        env:
+          MAVEN_OPTS: -Xms2g -Xmx2g
+        run: >
+          mvn -B -ntp -q exec:java
+          -Dexec.args="benchmark --dataset ${{ github.event.inputs.dataset || 'random-15p' }}
+          --algos ${{ github.event.inputs.algos || 'astar,ida,ida-tt:64,rbfs,sma:500000' }}
+          --heuristics ${{ github.event.inputs.heuristics || 'manhattan,linear-conflict,walking-distance,apdb' }}
+          --reps 3 --warmup 1 --timeout 60 --max-mem-mb 1024 --threads 1
+          --out target/nightly --name nightly"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nightly-benchmark-${{ github.run_number }}
+          path: |
+            target/nightly/
+            target/heuristic-verification.csv
+          retention-days: 90

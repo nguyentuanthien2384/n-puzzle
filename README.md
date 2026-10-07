@@ -2,6 +2,25 @@
 
 Dự án bài tập lớn môn **Nhập môn Trí tuệ nhân tạo** về bài toán ghép tranh **N-Puzzle**. Ứng dụng được viết bằng **Java 17 + JavaFX**, hỗ trợ chơi thủ công, trộn bảng từ trạng thái đích, nạp ảnh, và tự động giải bằng **9 thuật toán tìm kiếm** từ cơ bản đến chuyên sâu: BFS, A\*, IDA\*, Greedy Best-First, Bidirectional BFS, Value Iteration (MDP), Hill Climbing, Simulated Annealing, Genetic Algorithm, đi kèm **9 hàm heuristic** (đánh giá, Manhattan, Euclid, sai hàng/cột, linear conflict, Walking Distance, Pattern Database).
 
+## Phiên bản 3.0 — Research & Teaching Platform
+
+Từ v3.0, dự án có một **search engine độc lập JavaFX** dùng chung cho giao diện, CLI, benchmark và unit test (chi tiết: [docs/RESEARCH_PLATFORM.md](docs/RESEARCH_PLATFORM.md)):
+
+- **Search API** chuẩn hoá: `Board` bất biến, `Goal` tổng quát (đích tuỳ ý), `SearchAlgorithm`, `Heuristic` có khai báo tính chất, `SearchBudget` (thời gian/node/bộ nhớ), `SearchResult` + `SearchMetrics` đầy đủ (expanded, generated, duplicates, reopened, maxOpen, heuristicCalls, regenerated, evictions...).
+- **Thuật toán mới**: Weighted A\*, A\* không reopen, IDA\*-TT (bảng chuyển vị), **RBFS**, **SMA\*** (ngân sách bộ nhớ tường minh).
+- **Pattern Database tổng quát**: partition cấu hình được, PDB cộng (disjoint) có kiểm tra rời nhau, metadata + checksum, lưu/nạp file `.pdb`.
+- **Kiểm định heuristic vét cạn**: BFS ngược dựng h\* cho toàn bộ 181.440 trạng thái 3x3, kiểm tra h ≤ h\* và tính nhất quán trên mọi cạnh, kèm phản ví dụ. H5/H6 gốc được gắn nhãn *thử nghiệm*.
+- **Benchmark tái lập**: dataset có seed + checksum, warm-up, xáo thứ tự, executor riêng, xuất `manifest.json`, `environment.json`, `raw-results.csv`, `summary.csv`, biểu đồ SVG; JMH trong dự án riêng `benchmarks-jmh/`.
+- **Search Lab** (nút mới ở màn hình chính): Giải & Replay (phát lại lời giải và quá trình mở rộng node, chế độ Teaching, heatmap), Compare Lab, Kiểm định heuristic, Experiment Manager — chạy nền bằng `javafx.concurrent.Task`.
+- **CLI** (`cli.bat` / `cli.sh`) và **CI** GitHub Actions (test + JaCoCo + benchmark nhỏ tất định).
+
+```bash
+cli.bat list                                         # Linux/macOS: ./cli.sh list
+cli.bat solve --board 1,2,3,4,5,6,0,7,8 --algo ida --heuristic linear-conflict
+cli.bat verify                                       # kiểm định vét cạn mọi heuristic trên 3x3
+cli.bat benchmark --dataset random-15p --algos astar,ida,rbfs --heuristics manhattan,apdb --reps 3
+```
+
 ## Chức năng
 
 - Bảng **3x3, 4x4, 5x5** tương ứng Dễ / Trung bình / Khó.
@@ -11,6 +30,8 @@ Dự án bài tập lớn môn **Nhập môn Trí tuệ nhân tạo** về bài 
 - Trộn bảng bằng các bước di chuyển hợp lệ nên trạng thái sinh ra luôn có lời giải.
 - Nút dừng tìm kiếm và giới hạn 60 giây cho mỗi lượt giải.
 - Tốc độ phát lại lời giải tự thích ứng (lời giải dài của tìm kiếm cục bộ phát nhanh hơn).
+- Menu thuật toán có thêm **IDA\*-TT, RBFS, SMA\*, W-A\* 1.5** (dùng heuristic H1–H9 đang chọn, chạy qua search engine mới).
+- Nút **Search Lab (nghiên cứu)** mở phòng thí nghiệm với bảng và đích hiện tại.
 
 ## Thuật toán tìm kiếm
 
@@ -88,12 +109,20 @@ mvn test
 Các test chính nằm tại:
 
 ```text
-src/test/java/com/example/npuzzleai/StateTest.java
-src/test/java/com/example/npuzzleai/SearchTest.java
-src/test/java/com/example/npuzzleai/AdvancedSearchTest.java
+src/test/java/com/example/npuzzleai/StateTest.java              (v2)
+src/test/java/com/example/npuzzleai/SearchTest.java             (v2)
+src/test/java/com/example/npuzzleai/AdvancedSearchTest.java     (v2)
+src/test/java/com/example/npuzzleai/core/                       Board, khả giải vét cạn
+src/test/java/com/example/npuzzleai/verify/                     oracle h* (181.440 trạng thái, đường kính 31)
+src/test/java/com/example/npuzzleai/heuristics/                 kiểm định vét cạn mọi heuristic, PDB
+src/test/java/com/example/npuzzleai/algorithms/                 regression tối ưu, ngân sách, hủy, trace
+src/test/java/com/example/npuzzleai/benchmark/                  thí nghiệm tái lập, dataset
+src/test/java/com/example/npuzzleai/cli/                        CLI
 ```
 
-Bộ test xác minh: heuristic H7/H8 chấp nhận được và nhất quán, H9 chính xác trên 3x3 và tối ưu trên 4x4, IDA\*/Bidirectional BFS/Value Iteration cho độ dài tối ưu trùng với khoảng cách đúng, đường đi của mọi thuật toán đều là chuỗi nước đi hợp lệ, và các giới hạn kích thước (BFS/Value Iteration/tìm kiếm cục bộ 3x3, H7-H9 tới 4x4).
+Bộ test v2 xác minh: heuristic H7/H8 chấp nhận được và nhất quán, H9 chính xác trên 3x3 và tối ưu trên 4x4, IDA\*/Bidirectional BFS/Value Iteration cho độ dài tối ưu trùng với khoảng cách đúng, đường đi của mọi thuật toán đều là chuỗi nước đi hợp lệ, và các giới hạn kích thước (BFS/Value Iteration/tìm kiếm cục bộ 3x3, H7-H9 tới 4x4).
+
+Bộ test v3 kiểm định vét cạn mọi khai báo admissible/consistent trên toàn bộ không gian 3x3 với ba kiểu đích, đối chiếu mọi thuật toán tối ưu × heuristic chấp nhận được với h\* chính xác, và kiểm tra pipeline thí nghiệm xuất đủ file. `mvn verify` tạo thêm báo cáo coverage tại `target/site/jacoco/`.
 
 ## Cấu trúc dự án
 
@@ -101,10 +130,23 @@ Bộ test xác minh: heuristic H7/H8 chấp nhận được và nhất quán, H9
 n-puzzle-ai-main/
 ├─ pom.xml
 ├─ README.md
+├─ cli.bat / cli.sh                (v3 - CLI)
+├─ .github/workflows/              (v3 - CI và benchmark đêm)
+├─ benchmarks-jmh/                 (v3 - microbenchmark JMH, dự án Maven riêng)
 ├─ docs/
-│  └─ Bao_cao_N_Puzzle_EDITABLE.docx
+│  ├─ Bao_cao_N_Puzzle_EDITABLE.docx
+│  └─ RESEARCH_PLATFORM.md         (v3 - hướng dẫn nền tảng nghiên cứu)
 ├─ src/
 │  ├─ main/java/com/example/npuzzleai/
+│  │  ├─ core/        (v3) Board, Goal, Move, Solvability, BoardGenerator
+│  │  ├─ search/      (v3) SearchAlgorithm, Heuristic, SearchBudget, SearchResult, SearchMetrics...
+│  │  ├─ algorithms/  (v3) BFS, A*/W-A*/Greedy, IDA*, IDA*-TT, RBFS, SMA*, AlgorithmRegistry
+│  │  ├─ heuristics/  (v3) heuristic cơ bản, Walking Distance, H5/H6 gốc, pdb/ (PDB tổng quát)
+│  │  ├─ verify/      (v3) ExactDistanceTable, HeuristicVerifier
+│  │  ├─ benchmark/   (v3) dataset, ExperimentRunner, xuất CSV/JSON/SVG
+│  │  ├─ cli/         (v3) NPuzzleCli
+│  │  ├─ ui/          (v3) Search Lab
+│  │  │  (các lớp v2 bên dưới giữ nguyên)
 │  │  ├─ AStar.java            (A* + 6 heuristic gốc)
 │  │  ├─ BFS.java
 │  │  ├─ IDAStar.java          (mới)
